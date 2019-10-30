@@ -13,6 +13,9 @@
  */
 package org.openmrs.module.registrationcore.api;
 
+import java.util.List;
+import java.util.Map;
+
 import org.openmrs.Location;
 import org.openmrs.Patient;
 import org.openmrs.Relationship;
@@ -23,9 +26,6 @@ import org.openmrs.module.registrationcore.api.biometrics.BiometricEngine;
 import org.openmrs.module.registrationcore.api.biometrics.model.BiometricData;
 import org.openmrs.module.registrationcore.api.mpi.common.MpiPatient;
 import org.openmrs.module.registrationcore.api.search.PatientAndMatchQuality;
-
-import java.util.List;
-import java.util.Map;
 
 /**
  * This service exposes module's core functionality. It is a Spring managed bean which is configured
@@ -38,7 +38,7 @@ import java.util.Map;
  *
  * @see org.openmrs.api.context.Context
  */
-public interface RegistrationCoreService extends OpenmrsService {
+public interface BahmniRegCoreService extends OpenmrsService {
 
 	/**
 	 * Assigns an identifier to the patient and saves them in the database including the specified
@@ -73,7 +73,8 @@ public interface RegistrationCoreService extends OpenmrsService {
      * @should set wasPerson field to true for an existing person on the registration event
      * @should fail if identifier does not pass validation
      */
-    public Patient registerPatient(Patient patient, List<Relationship> relationships, String identifierString, Location identifierLocation);
+    public Patient registerPatient(Patient patient, List<Relationship> relationships, String identifierString,
+		    Location identifierLocation);
 
     /**
      * Registers patient and saves them in the database.
@@ -97,9 +98,6 @@ public interface RegistrationCoreService extends OpenmrsService {
 	 * @return the list
 	 */
 	List<PatientAndMatchQuality> findFastSimilarPatients(Patient patient, Map<String, Object> otherDataPoints,
-	                                                     Double cutoff, Integer maxResults);
-
-	public List<Patient> findFastSimilarOMRSPatients(Patient patient, Map<String, Object> otherDataPoints,
 			Double cutoff, Integer maxResults);
 
 	/**
@@ -114,7 +112,7 @@ public interface RegistrationCoreService extends OpenmrsService {
 	 * @return the list
 	 */
 	List<PatientAndMatchQuality> findPreciseSimilarPatients(Patient patient, Map<String, Object> otherDataPoints,
-	                                                        Double cutoff, Integer maxResults);
+			Double cutoff, Integer maxResults);
 	/**
 	 * Searches for given names that are similar to a search phrase.
 	 * <p>
@@ -144,17 +142,6 @@ public interface RegistrationCoreService extends OpenmrsService {
 	 * @should fail if more than one patient exits in the MPI for that specific identifier and identifier type
 	 */
 	MpiPatient findMpiPatient(String identifier, String identifierTypeUuid);
-
-
-	/**
-	 * Query to MPI server to find a single patient with Identifier of IdentifierType with IdentifierTypeUuid provided.
-	 *
-	 * @param identifier person identifier of patient to be found
-	 * @param identifierTypeUuid person identifier type of patient which will be found
-	 * @return found patient
-	 * @should fail if more than one patient exits in the MPI for that specific identifier and identifier type
-	 */
-	Patient findOMRSPatient(String identifier, String identifierTypeUuid);
 
 	/**
 	 * Import a specific patient by sending

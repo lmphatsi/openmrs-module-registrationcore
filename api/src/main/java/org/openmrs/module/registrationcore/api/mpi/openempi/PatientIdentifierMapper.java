@@ -1,5 +1,6 @@
 package org.openmrs.module.registrationcore.api.mpi.openempi;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.api.APIException;
@@ -23,11 +24,18 @@ public class PatientIdentifierMapper {
 
     public String getMappedLocalIdentifierTypeUuid(String mpiIdentifierTypeId) {
         validateInit();
+        String typeMapRetVal = null;
         for (IdentifierTypeMap typeMap : MAPPED_ID) {
             if (typeMap.mpiIdentifierUuid.equals(mpiIdentifierTypeId)) {
                 log.info("mpiIdentifierTypeId " + mpiIdentifierTypeId + " " +
                         "properly mapped for "+ typeMap.localIdentifierUuid);
                 return typeMap.localIdentifierUuid;
+            } else if (typeMap.mpiIdentifierUuid.length() > 30) {
+                if(mpiIdentifierTypeId.contains(typeMap.mpiIdentifierUuid.substring(0, 38))) {
+                    log.info("mpiIdentifierTypeId " + mpiIdentifierTypeId + " " +
+                            "properly mapped for " + typeMap.localIdentifierUuid);
+                    return typeMap.localIdentifierUuid;
+                }
             }
         }
         throw new MpiException("No proper mapping found for mpiIdentifierTypeId=" + mpiIdentifierTypeId + ". " +
