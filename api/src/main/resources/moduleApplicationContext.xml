@@ -69,6 +69,7 @@
           class="org.openmrs.module.registrationcore.api.impl.PatientCreatedListener" init-method="init">
         <property name="coreProperties" ref="registrationcore.coreProperties"/>
         <property name="patientService" ref="patientService"/>
+        <property name="personService" ref="personService"/>
         <property name="mpiProperties" ref="registrationcore.mpiProperties"/>
         <property name="identifierBuilder" ref="registrationcore.identifierBuilder"/>
     </bean>
@@ -77,6 +78,7 @@
           class="org.openmrs.module.registrationcore.api.impl.PatientUpdatedListener" init-method="init">
         <property name="coreProperties" ref="registrationcore.coreProperties"/>
         <property name="patientService" ref="patientService"/>
+        <property name="personService" ref="personService"/>
     </bean>
 
     <bean id="registrationcore.coreProperties"

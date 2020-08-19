@@ -9,8 +9,11 @@ import org.apache.commons.logging.LogFactory;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.openmrs.OpenmrsObject;
 import org.openmrs.Patient;
+import org.openmrs.PersonAddress;
+import org.openmrs.PersonAttribute;
 import org.openmrs.api.APIException;
 import org.openmrs.api.PatientService;
+import org.openmrs.api.PersonService;
 import org.openmrs.api.context.Daemon;
 import org.openmrs.event.Event;
 import org.openmrs.event.SubscribableEventListener;
@@ -32,6 +35,8 @@ public abstract class PatientActionListener implements SubscribableEventListener
 
     protected PatientService patientService;
 
+    protected PersonService personService;
+
     private DaemonToken daemonToken;
 
     public void setCoreProperties(RegistrationCoreProperties coreProperties) {
@@ -40,6 +45,10 @@ public abstract class PatientActionListener implements SubscribableEventListener
 
     public void setPatientService(PatientService patientService) {
         this.patientService = patientService;
+    }
+
+    public void setPersonService(PersonService personService) {
+        this.personService = personService;
     }
 
     public void setDaemonToken(DaemonToken daemonToken) {
@@ -80,6 +89,8 @@ public abstract class PatientActionListener implements SubscribableEventListener
     public List<Class<? extends OpenmrsObject>> subscribeToObjects(){
         List objects = new ArrayList<Class<? extends OpenmrsObject>>();
         objects.add(Patient.class);
+        objects.add(PersonAddress.class);
+        objects.add(PersonAttribute.class);
         return objects;
     }
 
@@ -120,7 +131,8 @@ public abstract class PatientActionListener implements SubscribableEventListener
     protected String getMessagePropertyValue(Message message, String propertyName) {
         validateMessage(message);
         try {
-            return ((MapMessage) message).getString(propertyName);
+            // return ((MapMessage) message).getString(propertyName);
+            return getPersonUuidFromMessage(message);
         } catch (JMSException e) {
             throw new APIException("Exception while get uuid of created patient from JMS message. " + e);
         }
@@ -152,6 +164,20 @@ public abstract class PatientActionListener implements SubscribableEventListener
         if (!(message instanceof MapMessage)){
             throw new APIException("Event message should be MapMessage, but it isn't");
         }
+    }
+
+    private String getPersonUuidFromMessage(Message message) throws JMSException {
+        String uuidvalue = "";
+        String uuidString = ((MapMessage) message).getString("uuid");
+        String classnameString = ((MapMessage) message).getString("classname");
+        if (classnameString.equalsIgnoreCase("org.openmrs.PersonAddress")) {
+            uuidvalue = personService.getPersonAddressByUuid(uuidString).getPerson().getUuid();
+        } else if (classnameString.equalsIgnoreCase("org.openmrs.PersonAttribute")) {
+            uuidvalue = personService.getPersonAttributeByUuid(uuidString).getPerson().getUuid();
+        } else {
+            uuidvalue = uuidString;
+        }
+        return uuidvalue;
     }
 
     /**
