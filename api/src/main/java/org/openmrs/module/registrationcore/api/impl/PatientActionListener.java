@@ -131,7 +131,6 @@ public abstract class PatientActionListener implements SubscribableEventListener
     protected String getMessagePropertyValue(Message message, String propertyName) {
         validateMessage(message);
         try {
-            // return ((MapMessage) message).getString(propertyName);
             return getPersonUuidFromMessage(message);
         } catch (JMSException e) {
             throw new APIException("Exception while get uuid of created patient from JMS message. " + e);
@@ -170,10 +169,15 @@ public abstract class PatientActionListener implements SubscribableEventListener
         String uuidvalue = "";
         String uuidString = ((MapMessage) message).getString("uuid");
         String classnameString = ((MapMessage) message).getString("classname");
-        if (classnameString.equalsIgnoreCase("org.openmrs.PersonAddress")) {
-            uuidvalue = personService.getPersonAddressByUuid(uuidString).getPerson().getUuid();
-        } else if (classnameString.equalsIgnoreCase("org.openmrs.PersonAttribute")) {
-            uuidvalue = personService.getPersonAttributeByUuid(uuidString).getPerson().getUuid();
+
+        if(personService != null) {
+            if (classnameString.equalsIgnoreCase("org.openmrs.PersonAddress")) {
+                uuidvalue = personService.getPersonAddressByUuid(uuidString).getPerson().getUuid();
+            } else if (classnameString.equalsIgnoreCase("org.openmrs.PersonAttribute")) {
+                uuidvalue = personService.getPersonAttributeByUuid(uuidString).getPerson().getUuid();
+            } else {
+                uuidvalue = uuidString;
+            }
         } else {
             uuidvalue = uuidString;
         }

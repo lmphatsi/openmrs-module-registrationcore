@@ -9,6 +9,7 @@ import org.openmrs.module.registrationcore.RegistrationCoreConstants;
 import org.openmrs.module.registrationcore.api.ModuleProperties;
 import org.openmrs.util.OpenmrsUtil;
 
+import java.lang.String;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -36,6 +37,11 @@ public class MpiProperties extends ModuleProperties {
 
     public String getMpiPersonIdentifierTypeUuid() {
         String propertyName = RegistrationCoreConstants.GP_MPI_PERSON_IDENTIFIER_TYPE_UUID;
+        return getProperty(propertyName);
+    }
+
+    public String getOMRSPersonIdentifierTypeUuid() {
+        String propertyName = RegistrationCoreConstants.GP_OPENMRS_IDENTIFIER_UUID;
         return getProperty(propertyName);
     }
 

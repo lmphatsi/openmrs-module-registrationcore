@@ -423,7 +423,7 @@ public class RegistrationCoreServiceImpl extends BaseOpenmrsService implements R
 	 * @should fail if more than one patient exits in the MPI for that specific identifier and identifier type
 	 */
 	@Override
-	public MpiPatient findMpiPatient(String identifier, String identifierTypeUuid) {
+	public MpiPatient   findMpiPatient(String identifier, String identifierTypeUuid) {
 		if (!registrationCoreProperties.isMpiEnabled()) {
 			throw new MpiException("Should not perform 'findMpiPatient' when MPI is disabled");
 		}
@@ -551,7 +551,7 @@ public class RegistrationCoreServiceImpl extends BaseOpenmrsService implements R
 		}
 		Patient patient = patientService.savePatient(mpiPatient.convertToPatient());
 
-		// Raise so that the patient is persisted to the XDS registry
+		// Raise so that the patient is persisted to the XDS registry | NOT NECCESARY SINCE THE EVENTS MODULE HANDLES THIS!!!!
 		raiseRegisterPatientEvent(patient, new ArrayList<Relationship>());
 
 		return patient;

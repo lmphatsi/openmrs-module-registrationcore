@@ -6,6 +6,7 @@ import ca.uhn.hl7v2.model.Group;
 import ca.uhn.hl7v2.model.Message;
 import ca.uhn.hl7v2.model.Structure;
 import ca.uhn.hl7v2.model.v25.datatype.CX;
+import ca.uhn.hl7v2.model.v25.datatype.CE;
 import ca.uhn.hl7v2.model.v25.datatype.XAD;
 import ca.uhn.hl7v2.model.v25.datatype.XPN;
 import ca.uhn.hl7v2.model.v25.datatype.XTN;
@@ -323,20 +324,20 @@ public class PixPdqMessageUtil {
                     }
 
                     PatientIdentifier patId = new PatientIdentifier(
-                            id.getIDNumber().getValue(),
+                            id.getIDNumber().toString(),
                             pit,
                             defaultLocation
                     );
 
                     if (patId.getIdentifierType().equals(patientService.getPatientIdentifierTypeByUuid(
-                            mpiProperties.getMpiPersonIdentifierTypeUuid()))) {
+                            mpiProperties.getOMRSPersonIdentifierTypeUuid()))) {
                         patId.setPreferred(true);
                     }
 
                     patient.addIdentifier(patId);
                 }
 
-                if(StringUtils.isNotBlank(pid.getSSNNumberPatient().getValue())) {
+                /**if(StringUtils.isNotBlank(pid.getSSNNumberPatient().getValue())) {
                     String nationalID = pid.getSSNNumberPatient().getValue();
                     PatientIdentifierType pitNationalId = Context.getPatientService().getPatientIdentifierTypeByUuid(
                             "0d2ac572-8de3-46c8-9976-1f78899c599f");
@@ -348,7 +349,7 @@ public class PixPdqMessageUtil {
                     );
 
                     patient.addIdentifier(nationalIdPatId);
-                }
+                }*/
 
                 // Attempt to copy names
                 for (XPN xpn : pid.getPatientName()) {
@@ -446,12 +447,46 @@ public class PixPdqMessageUtil {
                     patient.addAddress(pa);
                 }
 
-                // Mother's name
-                XPN momsName = pid.getMotherSMaidenName(0);
-                if (momsName != null) {
-                    PersonAttributeType momNameAtt = Context.getPersonService().getPersonAttributeTypeByName("Mother's Name");
+                // Work on mapping all attributes in this section
+                // Next of Kin or Treatment Supporter
+                XPN nextOfKin = pid.getPatientAlias(0);
+                if (nextOfKin != null) {
+                    PersonAttributeType momNameAtt = Context.getPersonService().getPersonAttributeTypeByName("primaryRelative");
                     if (momNameAtt != null) {
-                        PersonAttribute pa = new PersonAttribute(momNameAtt, String.format("%s, %s", momsName.getFamilyName().getSurname().getValue(), momsName.getGivenName().getValue()));
+                        PersonAttribute pa = new PersonAttribute(momNameAtt, String.format("%s", nextOfKin.getFamilyName().getSurname().getValue()));
+                        patient.addAttribute(pa);
+                    }
+                }
+
+                // Work on mapping all attributes in this section
+                // Mother's Maiden Surname
+                XPN mothersMaidenSurname = pid.getMotherSMaidenName(0);
+                if (mothersMaidenSurname != null) {
+                    PersonAttributeType momNameAtt = Context.getPersonService().getPersonAttributeTypeByName("mothersMaidenSurname");
+                    if (momNameAtt != null) {
+                        PersonAttribute pa = new PersonAttribute(momNameAtt, String.format("%s",
+                                mothersMaidenSurname.getFamilyName().getSurname().getValue()));
+                        patient.addAttribute(pa);
+                    }
+                }
+
+                // Telephone Number
+                XTN clientTelephoneNumber = pid.getPhoneNumberHome(0);
+                if(clientTelephoneNumber != null) {
+                    PersonAttributeType telephoneAttributeType = Context.getPersonService().getPersonAttributeTypeByName("telephoneNumber");
+                    if (telephoneAttributeType != null) {
+                        PersonAttribute pa = new PersonAttribute(telephoneAttributeType, String.format("%s", clientTelephoneNumber.getLocalNumber().getValue()));
+                        patient.addAttribute(pa);
+                    }
+                }
+
+                // Marriage Attribute Type
+                CE clientMaritalStatus = pid.getMaritalStatus();
+                if(clientMaritalStatus != null) {
+                    PersonAttributeType maritalStatusAttributeType = Context.getPersonService().getPersonAttributeTypeByName("isMarried");
+                    if (maritalStatusAttributeType != null) {
+                        String maritalStatusMaritalStatusCode = determinineMaritalStatusCode(clientMaritalStatus.getIdentifier().getValue());
+                        PersonAttribute pa = new PersonAttribute(maritalStatusAttributeType, String.format("%s", maritalStatusMaritalStatusCode));
                         patient.addAttribute(pa);
                     }
                 }
@@ -462,10 +497,30 @@ public class PixPdqMessageUtil {
         return retVal;
     }
 
+    private String determinineMaritalStatusCode(String maritalStatusCode) {
+        String result = null;
+        if(maritalStatusCode.equalsIgnoreCase("B")) {
+            result = "2181";
+        } else if (maritalStatusCode.equalsIgnoreCase("M")) {
+            result = "2182";
+        } else if (maritalStatusCode.equalsIgnoreCase("D")) {
+            result = "2183";
+        } else if (maritalStatusCode.equalsIgnoreCase("W")) {
+            result = "2184";
+        } else if (maritalStatusCode.equalsIgnoreCase("S")) {
+            result = "4173";
+        } else if (maritalStatusCode.equalsIgnoreCase("A")) {
+            result = "4178";
+        } else if (maritalStatusCode.equalsIgnoreCase("O")) {
+            result = "4244";
+        }
+        return result;
+    }
+
 	/**
 	 * Filter list of mpiPatients for mpiPatients with a specific identifier for a specific identifier type
 	 */
-	public List<MpiPatient> filterByIdentifierAndIdentifierType (  List<MpiPatient> patients,
+	public List<MpiPatient> filterByIdentifierAndIdentifierType (List<MpiPatient> patients,
 																String identifier,
 																String identifierTypeUuid){
         PatientIdentifierType identifierType = patientService.getPatientIdentifierTypeByUuid(identifierTypeUuid);
@@ -492,7 +547,7 @@ public class PixPdqMessageUtil {
 
     public Message createAdmit(Patient patient) throws HL7Exception {
         ADT_A01 message = new ADT_A01();
-        this.updateMSH(message.getMSH(), "ADT", "A01");
+        this.updateMSH(message.getMSH(), "ADT", "A04");
         message.getMSH().getVersionID().getVersionID().setValue("2.3.1");
         // Move patient data to PID
         this.updatePID(message.getPID(), patient);
@@ -566,7 +621,7 @@ public class PixPdqMessageUtil {
             //xad.getCity().setValue(pa.getCityVillage());
             xad.getOtherDesignation().setValue(pa.getCityVillage());
             // Also set country name
-            xad.getCountry().setValue("LESOTHO");
+            xad.getCountry().setValue("Lesotho");
         }
         if(pa.getCountry() != null)
             xad.getCountry().setValue(pa.getCountry());
@@ -588,19 +643,46 @@ public class PixPdqMessageUtil {
         }
 
         PersonName mother = new PersonName();
+        PersonName nextOfKin = new PersonName();
 
-        // Mother and Telephone
+        //  Marital Status, Next of Kin, Mother and Telephone
         for (PersonAttribute attribute : patient.getAttributes()) {
             if (isMotherAttributeType(attribute) && mother.getFamilyName() == null) {
                 mother.setFamilyName(attribute.getValue());
                 this.updateXPN(pid.getMotherSMaidenName(0), mother);
-            } else if (isTelephoneAttributeType(attribute)) {
+            } else if (isNextOfKinAttributeType(attribute) && nextOfKin.getFamilyName() == null) {
+                nextOfKin.setFamilyName(attribute.getValue());
+                this.updateXPN(pid.getPatientAlias(0), nextOfKin);
+            }
+            else if (isTelephoneAttributeType(attribute)) {
                 XTN xtn = pid.getPhoneNumberHome(0);
                 xtn.getTelephoneNumber().setValue(attribute.getValue());
                 xtn.getLocalNumber().setValue(attribute.getValue());
+            } else if(isMarriageAttributeType(attribute)) {
+                if(attribute.getValue().toString().equals("2181")){
+                    // Unmarried (2181) --> B
+                    pid.getMaritalStatus().getIdentifier().setValue("B");
+                } else if(attribute.getValue().toString().equals("2182")) {
+                    // Married (2182) --> M
+                    pid.getMaritalStatus().getIdentifier().setValue("M");
+                } else if(attribute.getValue().toString().equals("2183")) {
+                    // Divorced (2183) --> D
+                    pid.getMaritalStatus().getIdentifier().setValue("D");
+                } else if(attribute.getValue().toString().equals("2184")) {
+                    // Widowed (2184) --> W
+                    pid.getMaritalStatus().getIdentifier().setValue("W");
+                } else if(attribute.getValue().toString().equals("4173")) {
+                    // Single (4173) --> S
+                    pid.getMaritalStatus().getIdentifier().setValue("S");
+                } else if(attribute.getValue().toString().equals("4178")) {
+                    // Separation (4178) --> A
+                    pid.getMaritalStatus().getIdentifier().setValue("A");
+                } else if(attribute.getValue().toString().equals("4244")) {
+                    // Minor (4244) --> O
+                    pid.getMaritalStatus().getIdentifier().setValue("O");
+                }
             }
         }
-
     }
 
     public boolean isQueryError(Message message) throws HL7Exception {
@@ -612,8 +694,16 @@ public class PixPdqMessageUtil {
        return attribute.getAttributeType().getName().toLowerCase().contains("mother");
     }
 
+    private boolean isNextOfKinAttributeType(PersonAttribute attribute) {
+        return attribute.getAttributeType().getName().toLowerCase().contains("primaryrelative");
+    }
+
     private boolean isTelephoneAttributeType(PersonAttribute attribute) {
         return attribute.getAttributeType().getName().toLowerCase().contains("telephone");
+    }
+
+    private boolean isMarriageAttributeType(PersonAttribute attribute) {
+        return attribute.getAttributeType().getName().toLowerCase().contains("married");
     }
 
     /**
@@ -638,7 +728,6 @@ public class PixPdqMessageUtil {
             xpn.getNameTypeCode().setValue("L");
         else
             xpn.getNameTypeCode().setValue("U");
-
     }
 
 }
